@@ -1,6 +1,7 @@
 import math, tty, sys, time
 from copy import deepcopy
 from decimal import Decimal
+import re
 
 class InputError(Exception):
   """Exception raised for errors in the input.
@@ -15,6 +16,25 @@ class InputError(Exception):
 
   def __str__(self):
     return f'\x1b[31m{self.expression}: {self.message}\x1b[0m'
+
+def _cclen(string):
+  """Return printable length of string.
+
+  Attributes:
+      string -- string to be measured
+  """
+  sequence = re.compile(r"\x1b\[([0-9]|[:;<=>?])*[ !\"#$%&'()*+,\-./]*([A–Z]|[a-z]|[\\\]^_`{|}~])", re.IGNORECASE)
+  string = sequence.sub('', string)
+  count = 0
+  escaped = False
+  for char in string:
+    if char == '\x1b': # escape
+      escaped = True
+    elif escaped:
+      escaped = False
+    elif not escaped:
+      count += 1
+  return count
 
 operators = {
   '+': lambda x : x[-2] + x[-1],
@@ -93,20 +113,22 @@ def _pr (stack = [], inp = '', index = 0, warning = ''):
   if warning:
     st[-4] = warning
 
+  shift = max(8, _cclen(str(st[0])), _cclen(str(st[1])), _cclen(str(st[2])), _cclen(str(st[3])), _cclen(inp))
+
   sys.stdout.write(u"\u001b[1000D")   # Move all the way left
   sys.stdout.write('\u001b[4A')       # Move 4 lines up
 
   for i in range(4):
     sys.stdout.write(u"\u001b[0K")    # Clear the line
     if flags['help']:
-      sys.stdout.write('  ' + str(st[i]).ljust(6) + helps[i] + '\n')
+      sys.stdout.write('  ' + str(st[i]) + ' ' * (shift - _cclen(str(st[i]))) + helps[i] + '\n')
     else:
       sys.stdout.write('  ' + str(st[i]) + '\n')
     sys.stdout.write(u"\u001b[1000D") # Move all the way left again
 
   sys.stdout.write(u"\u001b[0K")      # Clear the line
   if flags['help']:
-    sys.stdout.write('> ' + inp.ljust(6) + helps[4])
+    sys.stdout.write('> ' + _mark(inp = inp) + ' ' * (shift - _cclen(_mark(inp = inp))) + helps[4])
   else:
     sys.stdout.write('> ' + _mark(inp = inp))
   sys.stdout.write(u"\u001b[1000D")   # Move all the way left again
@@ -137,7 +159,7 @@ def main():
       if char == 4: # CTRL-D / EOF
         exit()
       elif 32 <= char <= 126: # Printablee
-          inp = inp[:index] + chr(char) + inp[index:]
+          inp = inp[:index] + chr(char).lower() + inp[index:]
           index += 1
       elif char in {10, 13}: # Enter
         try:
@@ -214,6 +236,10 @@ def _parse (stack = [], inp = '', history = []):
   except ValueError:
     if inp in flags:
       flags[inp] = not flags[inp]
+    elif inp in ['del', 'delete']:
+      stack = stack[:-1]
+    elif inp == 'clear':
+      stack = []
     else:
       stack = _calculate(stack = stack, inp = inp)
       if stack:
