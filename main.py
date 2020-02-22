@@ -8,15 +8,13 @@ class InputError(Exception):
   """Exception raised for errors in the input.
 
   Attributes:
-      expression -- input expression in which the error occurred
       message -- explanation of the error
   """
-  def __init__(self, expression, message):
-    self.expression = expression
+  def __init__(self, message):
     self.message = message
 
   def __str__(self):
-    return f'\x1b[31m{self.expression}: {self.message}\x1b[0m'
+    return self.message
 
 def _cclen(string):
   """Return printable length of string.
@@ -112,7 +110,7 @@ def _pr (stack = [], inp = '', index = 0, warning = ''):
     st = [''] * (4 - len(st)) + st
 
   if warning:
-    st[-4] = warning
+    st[-4] = '\x1b[31m' + str(warning) + '\x1b[0m'
 
   shift = max(8, _cclen(str(st[0])), _cclen(str(st[1])), _cclen(str(st[2])), _cclen(str(st[3])), _cclen(inp))
 
@@ -122,25 +120,38 @@ def _pr (stack = [], inp = '', index = 0, warning = ''):
   width = get_terminal_size().columns
 
   for i in range(4):
-    line = '  ' + str(st[i]) + ' ' * (shift - _cclen(str(st[i]))) + helps[i]
-    if len(line) > width:
-      line = line[:width-1] + '…'
-    line += '\n'
     sys.stdout.write(u"\u001b[0K")    # Clear the line
     if flags['help']:
+      line = '  ' + str(st[i]) + ' ' * (shift - _cclen(str(st[i]))) + helps[i]
+      if len(line) > width:
+        line = line[:width-1] + '…'
+      line += '\n'
       sys.stdout.write(line)
     else:
-      sys.stdout.write('  ' + str(st[i]) + '\n')
+      line = '  ' + str(st[i])
+      if len(line) > width:
+        line = line[:width-1] + '…'
+      line += '\n'
+      sys.stdout.write(line)
     sys.stdout.write(u"\u001b[1000D") # Move all the way left again
 
   sys.stdout.write(u"\u001b[0K")      # Clear the line
   if flags['help']:
     line = '> ' + _mark(inp = inp) + ' ' * (shift - _cclen(_mark(inp = inp))) + helps[4]
     if len(line) > width:
-      line = line[:width-1] + '…'
+      if index + 2 > width:
+        line = '…' + line[index+4-width:index+2] + '…'
+      else:
+        line = line[:width-1] + '…'
     sys.stdout.write(line)
   else:
-    sys.stdout.write('> ' + _mark(inp = inp))
+    line = '> ' + _mark(inp = inp)
+    if len(line) > width:
+      if index + 2 > width:
+        line = '…' + line[index+4-width:index+2] + '…'
+      else:
+        line = line[:width-1] + '…'
+    sys.stdout.write(line)
   sys.stdout.write(u"\u001b[1000D")   # Move all the way left again
   sys.stdout.write(u"\u001b[" + str(index + 2) + "C") # Move cursor to index
 
@@ -176,6 +187,8 @@ def main():
           stack, history = parse(stack = stack, inputs = inp, history = history)
         except InputError as w:
           warning = w
+        except Exception as e:
+          warning = e
         inp = ""
         index = 0
         _pr(stack = stack, inp = inp, index = index, warning = warning)
@@ -220,7 +233,9 @@ def _calculate (stack = [], inp = ''):
   if inp == '':
     return stack
   elif len(stack) < 2 and (inp in operators):
-    raise InputError(inp, 'not enough values in stack')
+    raise InputError(inp + ': not enough values in stack')
+  elif len(stack) < 1 and (inp in singleops):
+    raise InputError(inp + ': not enough values in stack')
   elif inp in singleops:
     temp = stack[:-1] + [singleops[inp](stack)]
   elif inp in consts:
@@ -228,9 +243,9 @@ def _calculate (stack = [], inp = ''):
   elif inp in operators:
     temp = stack[:-2] + [operators[inp](stack)]
   else:
-    raise InputError(inp, 'operator or flag unknown')
+    raise InputError(inp + ': operator or flag unknown')
   if isinstance(temp[-1], complex):
-    raise InputError('i', 'Complex numbers not supported')
+    raise InputError('i: Complex numbers not supported')
   return temp
 
 def _parse (stack = [], inp = '', history = []):
@@ -242,6 +257,8 @@ def _parse (stack = [], inp = '', history = []):
     temp = float(inp)
     if temp.is_integer():
       temp = int(inp)
+    if math.isinf(temp):
+      raise InputError('∞: Value too big/small for python')
     stack.append(temp)
   except ValueError:
     if inp in flags:
