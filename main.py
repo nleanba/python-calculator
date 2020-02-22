@@ -1,6 +1,7 @@
 import math, tty, sys, time
 from copy import deepcopy
 from decimal import Decimal
+from shutil import get_terminal_size
 import re
 
 class InputError(Exception):
@@ -118,17 +119,26 @@ def _pr (stack = [], inp = '', index = 0, warning = ''):
   sys.stdout.write(u"\u001b[1000D")   # Move all the way left
   sys.stdout.write('\u001b[4A')       # Move 4 lines up
 
+  width = get_terminal_size().columns
+
   for i in range(4):
+    line = '  ' + str(st[i]) + ' ' * (shift - _cclen(str(st[i]))) + helps[i]
+    if len(line) > width:
+      line = line[:width-1] + '…'
+    line += '\n'
     sys.stdout.write(u"\u001b[0K")    # Clear the line
     if flags['help']:
-      sys.stdout.write('  ' + str(st[i]) + ' ' * (shift - _cclen(str(st[i]))) + helps[i] + '\n')
+      sys.stdout.write(line)
     else:
       sys.stdout.write('  ' + str(st[i]) + '\n')
     sys.stdout.write(u"\u001b[1000D") # Move all the way left again
 
   sys.stdout.write(u"\u001b[0K")      # Clear the line
   if flags['help']:
-    sys.stdout.write('> ' + _mark(inp = inp) + ' ' * (shift - _cclen(_mark(inp = inp))) + helps[4])
+    line = '> ' + _mark(inp = inp) + ' ' * (shift - _cclen(_mark(inp = inp))) + helps[4]
+    if len(line) > width:
+      line = line[:width-1] + '…'
+    sys.stdout.write(line)
   else:
     sys.stdout.write('> ' + _mark(inp = inp))
   sys.stdout.write(u"\u001b[1000D")   # Move all the way left again
