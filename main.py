@@ -48,7 +48,7 @@ operators = {
 }
 singleops = {
   'ceil': lambda x : math.ceil(x[-1]),
-  'fabs': lambda x : math.fabs(x[-1]),
+  'abs': lambda x : abs(x[-1]),
   'factorial': lambda x : math.factorial(x[-1]),
   '!': lambda x : math.factorial(x[-1]),
   'floor': lambda x : math.floor(x[-1]),
@@ -123,14 +123,14 @@ def _pr (stack = [], inp = '', index = 0, warning = ''):
     sys.stdout.write(u"\u001b[0K")    # Clear the line
     if flags['help']:
       line = '  ' + str(st[i]) + ' ' * (shift - _cclen(str(st[i]))) + helps[i]
-      if len(line) > width:
-        line = line[:width-1] + '…'
+      if _cclen(line) > width:
+        line = line[:width-1] + '\x1b[0m…'
       line += '\n'
       sys.stdout.write(line)
     else:
       line = '  ' + str(st[i])
-      if len(line) > width:
-        line = line[:width-1] + '…'
+      if _cclen(line) > width:
+        line = line[:width-1] + '\x1b[0m…'
       line += '\n'
       sys.stdout.write(line)
     sys.stdout.write(u"\u001b[1000D") # Move all the way left again
@@ -138,19 +138,19 @@ def _pr (stack = [], inp = '', index = 0, warning = ''):
   sys.stdout.write(u"\u001b[0K")      # Clear the line
   if flags['help']:
     line = '> ' + _mark(inp = inp) + ' ' * (shift - _cclen(_mark(inp = inp))) + helps[4]
-    if len(line) > width:
+    if _cclen(line) > width:
       if index + 2 > width:
-        line = '…' + line[index+4-width:index+2] + '…'
+        line = '…' + line[index+4-width:index+2] + '\x1b[0m…'
       else:
-        line = line[:width-1] + '…'
+        line = line[:width-1] + '\x1b[0m…'
     sys.stdout.write(line)
   else:
     line = '> ' + _mark(inp = inp)
-    if len(line) > width:
+    if _cclen(line) > width:
       if index + 2 > width:
-        line = '…' + line[index+4-width:index+2] + '…'
+        line = '…' + line[index+4-width:index+2] + '\x1b[0m…'
       else:
-        line = line[:width-1] + '…'
+        line = line[:width-1] + '\x1b[0m…'
     sys.stdout.write(line)
   sys.stdout.write(u"\u001b[1000D")   # Move all the way left again
   sys.stdout.write(u"\u001b[" + str(index + 2) + "C") # Move cursor to index
