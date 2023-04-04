@@ -1,3 +1,5 @@
+#!/bin/env python3
+
 import math, tty, sys, time
 from copy import deepcopy
 from decimal import Decimal
